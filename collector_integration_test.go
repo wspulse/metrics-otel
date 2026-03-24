@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,9 +22,12 @@ import (
 func dialWS(t *testing.T, url string) *websocket.Conn {
 	t.Helper()
 	dialer := websocket.Dialer{HandshakeTimeout: 3 * time.Second}
-	c, _, err := dialer.Dial(url, nil)
+	c, resp, err := dialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf("Dial failed: %v", err)
+	}
+	if resp != nil && resp.Body != nil {
+		resp.Body.Close()
 	}
 	return c
 }
@@ -61,11 +65,20 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	collector := wspotel.NewCollector(wspotel.WithMeterProvider(mp))
 
+	connected := make(chan struct{}, 4)
+	disconnected := make(chan struct{}, 4)
+
 	srv := wspulse.NewServer(
 		func(r *http.Request) (string, string, error) {
 			return "test-room", "", nil
 		},
 		wspulse.WithMetrics(collector),
+		wspulse.WithOnConnect(func(_ wspulse.Connection) {
+			connected <- struct{}{}
+		}),
+		wspulse.WithOnDisconnect(func(_ wspulse.Connection, _ error) {
+			disconnected <- struct{}{}
+		}),
 	)
 	ts := httptest.NewServer(srv)
 	defer func() {
@@ -75,10 +88,11 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http")
 
-	// Open 2 connections.
+	// Open 2 connections and wait for server to register them.
 	c1 := dialWS(t, wsURL)
 	c2 := dialWS(t, wsURL)
-	time.Sleep(100 * time.Millisecond)
+	<-connected
+	<-connected
 
 	rm := collect(t, reader)
 
@@ -92,10 +106,11 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 		t.Errorf("rooms active: want 1, got %d", got)
 	}
 
-	// Close connections.
+	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
 	_ = c2.Close()
-	time.Sleep(200 * time.Millisecond)
+	<-disconnected
+	<-disconnected
 
 	rm = collect(t, reader)
 
@@ -115,14 +130,22 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	collector := wspotel.NewCollector(wspotel.WithMeterProvider(mp))
 
+	connected := make(chan struct{}, 4)
+	var broadcastDone sync.WaitGroup
+
 	var srv wspulse.Server
 	srv = wspulse.NewServer(
 		func(r *http.Request) (string, string, error) {
 			return "test-room", "", nil
 		},
 		wspulse.WithMetrics(collector),
+		wspulse.WithOnConnect(func(_ wspulse.Connection) {
+			connected <- struct{}{}
+		}),
 		wspulse.WithOnMessage(func(conn wspulse.Connection, f wspulse.Frame) {
+			broadcastDone.Add(1)
 			_ = srv.Broadcast(conn.RoomID(), f)
+			broadcastDone.Done()
 		}),
 	)
 	ts := httptest.NewServer(srv)
@@ -137,14 +160,23 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	defer c1.Close()
 	c2 := dialWS(t, wsURL)
 	defer c2.Close()
-	time.Sleep(100 * time.Millisecond)
+	<-connected
+	<-connected
 
 	// Send a message — triggers MessageReceived + MessageBroadcast.
 	err := c1.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
 	if err != nil {
 		t.Fatalf("write: %v", err)
 	}
-	time.Sleep(200 * time.Millisecond)
+
+	// Wait for broadcast to complete.
+	broadcastDone.Wait()
+
+	// Read broadcast on both clients to ensure writePump sent them (MessageSent fires).
+	c1.SetReadDeadline(time.Now().Add(3 * time.Second))
+	c2.SetReadDeadline(time.Now().Add(3 * time.Second))
+	_, _, _ = c1.ReadMessage()
+	_, _, _ = c2.ReadMessage()
 
 	rm := collect(t, reader)
 

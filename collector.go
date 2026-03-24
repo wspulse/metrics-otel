@@ -6,7 +6,6 @@ package otel
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -153,7 +152,7 @@ func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration) {
 
 // ResumeAttempt increments the resume attempts counter.
 func (c *Collector) ResumeAttempt(roomID, _ string, success bool) {
-	attrs := []attribute.KeyValue{attribute.String("success", strconv.FormatBool(success))}
+	attrs := []attribute.KeyValue{attribute.Bool("success", success)}
 	if c.cfg.roomAttribute {
 		attrs = append(attrs, attribute.String("room.id", roomID))
 	}
@@ -161,15 +160,17 @@ func (c *Collector) ResumeAttempt(roomID, _ string, success bool) {
 }
 
 // RoomCreated increments the rooms created counter and active gauge.
-func (c *Collector) RoomCreated(_ string) {
-	c.roomsCreated.Add(context.Background(), 1)
-	c.roomsActive.Add(context.Background(), 1)
+func (c *Collector) RoomCreated(roomID string) {
+	attrs := c.roomAttrs(roomID)
+	c.roomsCreated.Add(context.Background(), 1, attrs)
+	c.roomsActive.Add(context.Background(), 1, attrs)
 }
 
 // RoomDestroyed increments the rooms destroyed counter and decrements the active gauge.
-func (c *Collector) RoomDestroyed(_ string) {
-	c.roomsDestroyed.Add(context.Background(), 1)
-	c.roomsActive.Add(context.Background(), -1)
+func (c *Collector) RoomDestroyed(roomID string) {
+	attrs := c.roomAttrs(roomID)
+	c.roomsDestroyed.Add(context.Background(), 1, attrs)
+	c.roomsActive.Add(context.Background(), -1, attrs)
 }
 
 // MessageReceived increments the messages received counter and bytes counter.

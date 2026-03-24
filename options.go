@@ -34,8 +34,14 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 
 // WithNamespace sets the meter name used when creating the OTel Meter.
 // Defaults to "wspulse". Instruments are named "{namespace}.connections.opened", etc.
+// An empty string falls back to the default ("wspulse").
 func WithNamespace(ns string) Option {
-	return func(c *collectorConfig) { c.namespace = ns }
+	return func(c *collectorConfig) {
+		if ns == "" {
+			return
+		}
+		c.namespace = ns
+	}
 }
 
 // WithRoomAttribute controls whether room.id is included as an attribute on
