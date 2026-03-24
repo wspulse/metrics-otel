@@ -1,0 +1,4 @@
+doc/local/
+coverage.out
+coverage.html
+.DS_Store
