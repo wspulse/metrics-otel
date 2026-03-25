@@ -33,7 +33,7 @@ make tidy       # go mod tidy
 - **Naming**: interface names use full words. Package name is `otel`.
 - **Instrument naming**: dot-separated (`wspulse.connections.opened`), follows [OTel Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/).
 - **Attribute naming**: dot-separated keys (`room.id`, not `room_id`).
-- **Error format**: `fmt.Errorf("wspulse/metrics-otel: <context>: %w", err)`.
+- **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
 - **Markdown**: no emojis in documentation files.
 - **Git**: commit messages follow [commit-message-instructions.md](instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
 

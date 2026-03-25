@@ -58,7 +58,7 @@ func NewCollector(opts ...Option) *Collector {
 	meter := cfg.meterProvider.Meter(cfg.namespace)
 	must := func(err error) {
 		if err != nil {
-			panic(fmt.Sprintf("wspulse/metrics-otel: failed to create instrument: %v", err))
+			panic(fmt.Sprintf("wspulse: failed to create instrument: %v", err))
 		}
 	}
 

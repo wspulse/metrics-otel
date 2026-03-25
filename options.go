@@ -27,7 +27,7 @@ func defaultConfig() *collectorConfig {
 // Panics if mp is nil.
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	if mp == nil {
-		panic("wspulse/metrics-otel: WithMeterProvider: provider must not be nil")
+		panic("wspulse: WithMeterProvider: provider must not be nil")
 	}
 	return func(c *collectorConfig) { c.meterProvider = mp }
 }
