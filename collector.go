@@ -134,6 +134,15 @@ func (c *Collector) roomAttrs(roomID string) metric.MeasurementOption {
 	return metric.WithAttributes(attribute.String("room.id", roomID))
 }
 
+// roomReasonAttrs returns room attributes combined with an extra attribute
+// (typically disconnect.reason). Used by ConnectionClosed.
+func (c *Collector) roomReasonAttrs(roomID string, extra attribute.KeyValue) metric.MeasurementOption {
+	if !c.cfg.roomAttribute {
+		return metric.WithAttributes(extra)
+	}
+	return metric.WithAttributes(attribute.String("room.id", roomID), extra)
+}
+
 // ConnectionOpened increments the connections opened counter and active gauge.
 func (c *Collector) ConnectionOpened(roomID, _ string) {
 	attrs := c.roomAttrs(roomID)
@@ -142,12 +151,15 @@ func (c *Collector) ConnectionOpened(roomID, _ string) {
 }
 
 // ConnectionClosed increments the connections closed counter, decrements the
-// active gauge, and records the connection duration.
-func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration) {
-	attrs := c.roomAttrs(roomID)
-	c.connectionsClosed.Add(context.Background(), 1, attrs)
-	c.connectionsActive.Add(context.Background(), -1, attrs)
-	c.connectionDuration.Record(context.Background(), duration.Seconds(), attrs)
+// active gauge, and records the connection duration. The disconnect.reason
+// attribute distinguishes disconnect causes (normal, kick, grace_expired, etc.).
+func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration, reason wspulse.DisconnectReason) {
+	reasonAttr := attribute.String("disconnect.reason", string(reason))
+	activeAttrs := c.roomAttrs(roomID)
+	closedAttrs := c.roomReasonAttrs(roomID, reasonAttr)
+	c.connectionsClosed.Add(context.Background(), 1, closedAttrs)
+	c.connectionsActive.Add(context.Background(), -1, activeAttrs)
+	c.connectionDuration.Record(context.Background(), duration.Seconds(), closedAttrs)
 }
 
 // ResumeAttempt increments the resume attempts counter.

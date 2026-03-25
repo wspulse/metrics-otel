@@ -162,7 +162,7 @@ func TestConnectionClosed(t *testing.T) {
 	c, reader := newTestCollector(t)
 
 	c.ConnectionOpened("room1", "conn1")
-	c.ConnectionClosed("room1", "conn1", 5*time.Second)
+	c.ConnectionClosed("room1", "conn1", 5*time.Second, wspulse.DisconnectNormal)
 
 	rm := collectMetrics(t, reader)
 
