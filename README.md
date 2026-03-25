@@ -49,6 +49,7 @@ collector := wspotel.NewCollector(
 
 ## Documentation
 
+- [Usage Guide](doc/usage.md) — options, instruments, attributes, histogram buckets
 - [Metrics Integration Guide](https://github.com/wspulse/docs/blob/main/guides/metrics.md)
 
 ## Related Modules
