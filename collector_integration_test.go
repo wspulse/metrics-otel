@@ -143,9 +143,8 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 			connected <- struct{}{}
 		}),
 		wspulse.WithOnMessage(func(conn wspulse.Connection, f wspulse.Frame) {
-			broadcastDone.Add(1)
+			defer broadcastDone.Done()
 			_ = srv.Broadcast(conn.RoomID(), f)
-			broadcastDone.Done()
 		}),
 	)
 	ts := httptest.NewServer(srv)
@@ -164,6 +163,7 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	<-connected
 
 	// Send a message — triggers MessageReceived + MessageBroadcast.
+	broadcastDone.Add(1)
 	err := c1.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
 	if err != nil {
 		t.Fatalf("write: %v", err)

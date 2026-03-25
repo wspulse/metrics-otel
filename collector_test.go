@@ -186,6 +186,14 @@ func TestConnectionClosed(t *testing.T) {
 	if dur == nil {
 		t.Fatal("metric wspulse.connection.duration not found")
 	}
+
+	// Verify disconnect.reason attribute is present on closed counter and duration.
+	if !hasAttribute(closed, "disconnect.reason") {
+		t.Error("connections.closed missing disconnect.reason attribute")
+	}
+	if !hasAttribute(dur, "disconnect.reason") {
+		t.Error("connection.duration missing disconnect.reason attribute")
+	}
 }
 
 func TestResumeAttempt(t *testing.T) {
@@ -361,6 +369,7 @@ func TestWithRoomAttribute_False(t *testing.T) {
 	c, reader := newTestCollector(t, wspotel.WithRoomAttribute(false))
 
 	c.ConnectionOpened("room1", "conn1")
+	c.ConnectionClosed("room1", "conn1", 2*time.Second, wspulse.DisconnectKick)
 	c.MessageReceived("room1", 100)
 
 	rm := collectMetrics(t, reader)
@@ -374,6 +383,18 @@ func TestWithRoomAttribute_False(t *testing.T) {
 	}
 	if hasAttribute(m, "room.id") {
 		t.Error("room.id attribute should not exist when WithRoomAttribute(false)")
+	}
+
+	// disconnect.reason must be present even without room attribute.
+	closed := findMetric(rm, "wspulse.connections.closed")
+	if closed == nil {
+		t.Fatal("metric wspulse.connections.closed not found")
+	}
+	if !hasAttribute(closed, "disconnect.reason") {
+		t.Error("connections.closed missing disconnect.reason when WithRoomAttribute(false)")
+	}
+	if hasAttribute(closed, "room.id") {
+		t.Error("connections.closed should not have room.id when WithRoomAttribute(false)")
 	}
 }
 
