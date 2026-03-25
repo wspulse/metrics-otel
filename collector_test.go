@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
@@ -57,18 +58,28 @@ func sumInt64(m *metricdata.Metrics) int64 {
 	}
 }
 
-// sumFloat64 sums all data points for a Float64 gauge.
-func sumFloat64(m *metricdata.Metrics) float64 {
-	switch d := m.Data.(type) {
-	case metricdata.Gauge[float64]:
+// histogramSum returns the sum of all data points in a Float64 histogram.
+func histogramSum(m *metricdata.Metrics) float64 {
+	if d, ok := m.Data.(metricdata.Histogram[float64]); ok {
 		var total float64
 		for _, dp := range d.DataPoints {
-			total += dp.Value
+			total += dp.Sum
 		}
 		return total
-	default:
-		return 0
 	}
+	return 0
+}
+
+// histogramCount returns the total count across all data points in a Float64 histogram.
+func histogramCount(m *metricdata.Metrics) uint64 {
+	if d, ok := m.Data.(metricdata.Histogram[float64]); ok {
+		var total uint64
+		for _, dp := range d.DataPoints {
+			total += dp.Count
+		}
+		return total
+	}
+	return 0
 }
 
 // hasAttribute checks if any data point has a specific attribute key.
@@ -110,6 +121,44 @@ func hasAttribute(m *metricdata.Metrics, key string) bool {
 	return false
 }
 
+// assertAttributeValue checks that at least one data point in the metric has
+// the given attribute key with the expected string value.
+func assertAttributeValue(t *testing.T, m *metricdata.Metrics, key, wantValue string) {
+	t.Helper()
+	found := false
+	check := func(attrs attribute.Set) {
+		v, ok := attrs.Value(attribute.Key(key))
+		if ok && v.Emit() == wantValue {
+			found = true
+		}
+	}
+	switch d := m.Data.(type) {
+	case metricdata.Sum[int64]:
+		for _, dp := range d.DataPoints {
+			check(dp.Attributes)
+		}
+	case metricdata.Sum[float64]:
+		for _, dp := range d.DataPoints {
+			check(dp.Attributes)
+		}
+	case metricdata.Gauge[float64]:
+		for _, dp := range d.DataPoints {
+			check(dp.Attributes)
+		}
+	case metricdata.Histogram[float64]:
+		for _, dp := range d.DataPoints {
+			check(dp.Attributes)
+		}
+	case metricdata.Histogram[int64]:
+		for _, dp := range d.DataPoints {
+			check(dp.Attributes)
+		}
+	}
+	if !found {
+		t.Errorf("expected attribute %s=%q, not found in metric %s", key, wantValue, m.Name)
+	}
+}
+
 // ── Interface compliance ─────────────────────────────────────────────────────
 
 func TestCollector_ImplementsMetricsCollector(t *testing.T) {
@@ -147,6 +196,7 @@ func TestConnectionOpened(t *testing.T) {
 	if got := sumInt64(m); got != 2 {
 		t.Errorf("connections opened: want 2, got %d", got)
 	}
+	assertAttributeValue(t, m, "room.id", "room1")
 
 	active := findMetric(rm, "wspulse.connections.active")
 	if active == nil {
@@ -187,12 +237,50 @@ func TestConnectionClosed(t *testing.T) {
 		t.Fatal("metric wspulse.connection.duration not found")
 	}
 
-	// Verify disconnect.reason attribute is present on closed counter and duration.
-	if !hasAttribute(closed, "disconnect.reason") {
-		t.Error("connections.closed missing disconnect.reason attribute")
+	// Verify disconnect.reason attribute value on closed counter and duration.
+	assertAttributeValue(t, closed, "disconnect.reason", "normal")
+	assertAttributeValue(t, dur, "disconnect.reason", "normal")
+}
+
+func TestConnectionClosed_AllReasons(t *testing.T) {
+	t.Parallel()
+
+	reasons := []struct {
+		reason wspulse.DisconnectReason
+		want   string
+	}{
+		{wspulse.DisconnectNormal, "normal"},
+		{wspulse.DisconnectKick, "kick"},
+		{wspulse.DisconnectGraceExpired, "grace_expired"},
+		{wspulse.DisconnectServerClose, "server_close"},
+		{wspulse.DisconnectDuplicate, "duplicate"},
 	}
-	if !hasAttribute(dur, "disconnect.reason") {
-		t.Error("connection.duration missing disconnect.reason attribute")
+
+	for _, tt := range reasons {
+		t.Run(tt.want, func(t *testing.T) {
+			t.Parallel()
+			c, reader := newTestCollector(t)
+
+			c.ConnectionOpened("room1", "conn1")
+			c.ConnectionClosed("room1", "conn1", 2*time.Second, tt.reason)
+
+			rm := collectMetrics(t, reader)
+
+			closed := findMetric(rm, "wspulse.connections.closed")
+			if closed == nil {
+				t.Fatal("metric wspulse.connections.closed not found")
+			}
+			if got := sumInt64(closed); got != 1 {
+				t.Errorf("connections closed: want 1, got %d", got)
+			}
+			assertAttributeValue(t, closed, "disconnect.reason", tt.want)
+
+			dur := findMetric(rm, "wspulse.connection.duration")
+			if dur == nil {
+				t.Fatal("metric wspulse.connection.duration not found")
+			}
+			assertAttributeValue(t, dur, "disconnect.reason", tt.want)
+		})
 	}
 }
 
@@ -210,6 +298,23 @@ func TestResumeAttempt(t *testing.T) {
 	if got := sumInt64(m); got != 1 {
 		t.Errorf("resume attempts: want 1, got %d", got)
 	}
+}
+
+func TestResumeAttempt_Failure(t *testing.T) {
+	t.Parallel()
+	c, reader := newTestCollector(t)
+
+	c.ResumeAttempt("room1", "conn1", false)
+
+	rm := collectMetrics(t, reader)
+	m := findMetric(rm, "wspulse.resume.attempts")
+	if m == nil {
+		t.Fatal("metric wspulse.resume.attempts not found")
+	}
+	if got := sumInt64(m); got != 1 {
+		t.Errorf("resume attempts: want 1, got %d", got)
+	}
+	assertAttributeValue(t, m, "success", "false")
 }
 
 // ── Room lifecycle ───────────────────────────────────────────────────────────
@@ -338,8 +443,31 @@ func TestSendBufferUtilization(t *testing.T) {
 	if m == nil {
 		t.Fatal("metric wspulse.send_buffer.utilization not found")
 	}
-	if got := sumFloat64(m); got != 0.5 {
-		t.Errorf("buffer utilization: want 0.5, got %v", got)
+	if got := histogramCount(m); got != 1 {
+		t.Errorf("buffer utilization count: want 1, got %d", got)
+	}
+	if got := histogramSum(m); got != 0.5 {
+		t.Errorf("buffer utilization sum: want 0.5, got %v", got)
+	}
+}
+
+func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
+	t.Parallel()
+	c, reader := newTestCollector(t)
+
+	c.SendBufferUtilization("room1", "conn1", 0, 0)
+
+	rm := collectMetrics(t, reader)
+
+	m := findMetric(rm, "wspulse.send_buffer.utilization")
+	if m == nil {
+		t.Fatal("metric wspulse.send_buffer.utilization not found")
+	}
+	if got := histogramCount(m); got != 1 {
+		t.Errorf("buffer utilization count: want 1, got %d", got)
+	}
+	if got := histogramSum(m); got != 0.0 {
+		t.Errorf("buffer utilization sum: want 0.0, got %v", got)
 	}
 }
 
@@ -359,6 +487,27 @@ func TestPongTimeout(t *testing.T) {
 	}
 	if got := sumInt64(m); got != 1 {
 		t.Errorf("pong timeouts: want 1, got %d", got)
+	}
+}
+
+func TestWithNamespace_Empty(t *testing.T) {
+	t.Parallel()
+	c, reader := newTestCollector(t, wspotel.WithNamespace(""))
+
+	c.RoomCreated("room1")
+
+	rm := collectMetrics(t, reader)
+
+	// Empty namespace should fall back to "wspulse".
+	m := findMetric(rm, "wspulse.rooms.created")
+	if m == nil {
+		var names []string
+		for _, sm := range rm.ScopeMetrics {
+			for _, metric := range sm.Metrics {
+				names = append(names, metric.Name)
+			}
+		}
+		t.Fatalf("expected wspulse.rooms.created (empty namespace fallback), got: %v", names)
 	}
 }
 
@@ -418,5 +567,41 @@ func TestWithNamespace(t *testing.T) {
 			}
 		}
 		t.Fatalf("expected myapp.rooms.created, got: %v", names)
+	}
+}
+
+// ── Benchmarks ──────────────────────────────────────────────────────────────
+
+func newBenchCollector(b *testing.B, opts ...wspotel.Option) *wspotel.Collector {
+	b.Helper()
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	allOpts := append([]wspotel.Option{
+		wspotel.WithMeterProvider(mp),
+	}, opts...)
+	return wspotel.NewCollector(allOpts...)
+}
+
+func BenchmarkConnectionOpened(b *testing.B) {
+	c := newBenchCollector(b)
+	b.ResetTimer()
+	for b.Loop() {
+		c.ConnectionOpened("room1", "conn1")
+	}
+}
+
+func BenchmarkMessageReceived(b *testing.B) {
+	c := newBenchCollector(b)
+	b.ResetTimer()
+	for b.Loop() {
+		c.MessageReceived("room1", 256)
+	}
+}
+
+func BenchmarkConnectionOpened_NoRoomAttr(b *testing.B) {
+	c := newBenchCollector(b, wspotel.WithRoomAttribute(false))
+	b.ResetTimer()
+	for b.Loop() {
+		c.ConnectionOpened("room1", "conn1")
 	}
 }
