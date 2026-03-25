@@ -38,7 +38,7 @@ type Collector struct {
 	broadcastFanout       metric.Int64Histogram
 	messagesSent          metric.Int64Counter
 	framesDropped         metric.Int64Counter
-	sendBufferUtilization metric.Float64Gauge
+	sendBufferUtilization metric.Float64Histogram
 
 	// Heartbeat
 	pongTimeouts metric.Int64Counter
@@ -77,7 +77,8 @@ func NewCollector(opts ...Option) *Collector {
 	must(err)
 	c.connectionDuration, err = meter.Float64Histogram(cfg.namespace+".connection.duration",
 		metric.WithDescription("Duration of connections in seconds."),
-		metric.WithUnit("s"))
+		metric.WithUnit("s"),
+		metric.WithExplicitBucketBoundaries(1, 5, 15, 30, 60, 300, 900, 1800, 3600, 7200, 14400, 43200, 86400))
 	must(err)
 	c.resumeAttempts, err = meter.Int64Counter(cfg.namespace+".resume.attempts",
 		metric.WithDescription("Total number of session resume attempts."))
@@ -106,7 +107,8 @@ func NewCollector(opts ...Option) *Collector {
 		metric.WithDescription("Total number of messages broadcast."))
 	must(err)
 	c.broadcastFanout, err = meter.Int64Histogram(cfg.namespace+".broadcast.fanout",
-		metric.WithDescription("Number of recipients per broadcast."))
+		metric.WithDescription("Number of recipients per broadcast."),
+		metric.WithExplicitBucketBoundaries(1, 2, 5, 10, 25, 50, 100, 250, 500, 1000))
 	must(err)
 	c.messagesSent, err = meter.Int64Counter(cfg.namespace+".messages.sent",
 		metric.WithDescription("Total number of messages sent to connections."))
@@ -114,8 +116,9 @@ func NewCollector(opts ...Option) *Collector {
 	c.framesDropped, err = meter.Int64Counter(cfg.namespace+".frames.dropped",
 		metric.WithDescription("Total number of frames dropped due to backpressure."))
 	must(err)
-	c.sendBufferUtilization, err = meter.Float64Gauge(cfg.namespace+".send_buffer.utilization",
-		metric.WithDescription("Send buffer utilization ratio (used/capacity)."))
+	c.sendBufferUtilization, err = meter.Float64Histogram(cfg.namespace+".send_buffer.utilization",
+		metric.WithDescription("Send buffer utilization ratio (used/capacity)."),
+		metric.WithExplicitBucketBoundaries(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0))
 	must(err)
 
 	// Heartbeat
