@@ -58,6 +58,25 @@ func findIntMetric(rm metricdata.ResourceMetrics, name string) int64 {
 	return -1
 }
 
+// waitForMetric polls the ManualReader until the named metric reaches the
+// expected value or the timeout expires. This accounts for async metric
+// recording in server goroutines (e.g. writePump fires MessageSent after
+// the frame is written).
+func waitForMetric(t *testing.T, reader *sdkmetric.ManualReader, name string, want int64, timeout time.Duration) int64 {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var got int64
+	for time.Now().Before(deadline) {
+		rm := collect(t, reader)
+		got = findIntMetric(rm, name)
+		if got >= want {
+			return got
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return got
+}
+
 // ── Integration tests ────────────────────────────────────────────────────────
 
 func TestIntegration_ConnectionLifecycle(t *testing.T) {
@@ -172,11 +191,11 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// Wait for broadcast to complete.
 	broadcastDone.Wait()
 
-	// Read broadcast on both clients to ensure writePump sent them (MessageSent fires).
-	c1.SetReadDeadline(time.Now().Add(3 * time.Second))
-	c2.SetReadDeadline(time.Now().Add(3 * time.Second))
-	_, _, _ = c1.ReadMessage()
-	_, _, _ = c2.ReadMessage()
+	// Wait for both writePumps to deliver. MessageSent fires asynchronously
+	// in the server's writePump, so poll until the metric reaches the expected value.
+	if got := waitForMetric(t, reader, "wspulse.messages.sent", 2, 3*time.Second); got != 2 {
+		t.Errorf("messages sent: want 2, got %d", got)
+	}
 
 	rm := collect(t, reader)
 
@@ -185,8 +204,5 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	}
 	if got := findIntMetric(rm, "wspulse.messages.broadcast"); got != 1 {
 		t.Errorf("messages broadcast: want 1, got %d", got)
-	}
-	if got := findIntMetric(rm, "wspulse.messages.sent"); got != 2 {
-		t.Errorf("messages sent: want 2, got %d", got)
 	}
 }
