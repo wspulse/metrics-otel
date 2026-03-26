@@ -3,6 +3,8 @@
 [![CI](https://github.com/wspulse/metrics-otel/actions/workflows/ci.yml/badge.svg)](https://github.com/wspulse/metrics-otel/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/wspulse/metrics-otel.svg)](https://pkg.go.dev/github.com/wspulse/metrics-otel)
 [![Go](https://img.shields.io/badge/Go-1.26-blue.svg?logo=go)](https://go.dev)
+[![OTel](https://img.shields.io/badge/OpenTelemetry-v1.42.0-blue.svg?logo=opentelemetry)](https://opentelemetry.io)
+[![wspulse/server](https://img.shields.io/badge/wspulse%2Fserver-v0.5.0-blue.svg)](https://github.com/wspulse/server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 OpenTelemetry adapter for [wspulse/server](https://github.com/wspulse/server)'s `MetricsCollector` interface.
