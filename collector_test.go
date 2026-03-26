@@ -498,7 +498,7 @@ func TestWithNamespace_Empty(t *testing.T) {
 
 	rm := collectMetrics(t, reader)
 
-	// Empty namespace should fall back to "wspulse".
+	// Empty namespace is a no-op — default "wspulse" is used.
 	m := findMetric(rm, "wspulse.rooms.created")
 	if m == nil {
 		var names []string
@@ -507,7 +507,7 @@ func TestWithNamespace_Empty(t *testing.T) {
 				names = append(names, metric.Name)
 			}
 		}
-		t.Fatalf("expected wspulse.rooms.created (empty namespace fallback), got: %v", names)
+		t.Fatalf("expected wspulse.rooms.created (empty namespace ignored), got: %v", names)
 	}
 }
 

@@ -38,7 +38,7 @@ collector := wspotel.NewCollector(
 | Option | Default | Description |
 |--------|---------|-------------|
 | `WithMeterProvider(mp)` | `otel.GetMeterProvider()` | Sets the OTel MeterProvider used to create instruments. Panics if nil. |
-| `WithNamespace(ns)` | `"wspulse"` | Sets the meter name and instrument name prefix. Empty string falls back to default. |
+| `WithNamespace(ns)` | `"wspulse"` | Sets the meter name and instrument name prefix. Empty string is ignored. |
 | `WithRoomAttribute(bool)` | `true` | Controls whether `room.id` is included as an attribute. Set to `false` in high-cardinality environments. |
 
 ### High-Cardinality Environments
@@ -110,7 +110,7 @@ Default buckets are tuned for WebSocket workloads. Override them with [OTel View
 | `broadcast.fanout` | 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000 (recipients) |
 | `send_buffer.utilization` | 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99, 1.0 (ratio) |
 
-Example: override `connection.duration` buckets:
+Example: override `connection.duration` buckets (the instrument name must match the configured namespace, default `wspulse`):
 
 ```go
 view := sdkmetric.NewView(

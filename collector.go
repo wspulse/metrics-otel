@@ -1,6 +1,6 @@
 // Package otel provides an OpenTelemetry adapter for wspulse/server's
 // MetricsCollector interface. It translates server lifecycle events into
-// OTel instruments (counters, up-down counters, histograms, gauges).
+// OTel instruments (counters, up-down counters, histograms).
 package otel
 
 import (
@@ -146,7 +146,7 @@ func (c *Collector) roomReasonAttrs(roomID string, extra attribute.KeyValue) met
 	return metric.WithAttributes(attribute.String("room.id", roomID), extra)
 }
 
-// ConnectionOpened increments the connections opened counter and active gauge.
+// ConnectionOpened increments the connections opened counter and active up-down counter.
 func (c *Collector) ConnectionOpened(roomID, _ string) {
 	attrs := c.roomAttrs(roomID)
 	c.connectionsOpened.Add(context.Background(), 1, attrs)
@@ -154,7 +154,7 @@ func (c *Collector) ConnectionOpened(roomID, _ string) {
 }
 
 // ConnectionClosed increments the connections closed counter, decrements the
-// active gauge, and records the connection duration. The disconnect.reason
+// active up-down counter, and records the connection duration. The disconnect.reason
 // attribute distinguishes disconnect causes (normal, kick, grace_expired, etc.).
 func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration, reason wspulse.DisconnectReason) {
 	reasonAttr := attribute.String("disconnect.reason", string(reason))
@@ -174,14 +174,14 @@ func (c *Collector) ResumeAttempt(roomID, _ string, success bool) {
 	c.resumeAttempts.Add(context.Background(), 1, metric.WithAttributes(attrs...))
 }
 
-// RoomCreated increments the rooms created counter and active gauge.
+// RoomCreated increments the rooms created counter and active up-down counter.
 func (c *Collector) RoomCreated(roomID string) {
 	attrs := c.roomAttrs(roomID)
 	c.roomsCreated.Add(context.Background(), 1, attrs)
 	c.roomsActive.Add(context.Background(), 1, attrs)
 }
 
-// RoomDestroyed increments the rooms destroyed counter and decrements the active gauge.
+// RoomDestroyed increments the rooms destroyed counter and decrements the active up-down counter.
 func (c *Collector) RoomDestroyed(roomID string) {
 	attrs := c.roomAttrs(roomID)
 	c.roomsDestroyed.Add(context.Background(), 1, attrs)
