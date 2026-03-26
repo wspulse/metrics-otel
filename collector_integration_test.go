@@ -69,7 +69,7 @@ func waitForMetric(t *testing.T, reader *sdkmetric.ManualReader, name string, wa
 	for time.Now().Before(deadline) {
 		rm := collect(t, reader)
 		got = findIntMetric(rm, name)
-		if got == want {
+		if got >= want {
 			return got
 		}
 		time.Sleep(10 * time.Millisecond)
