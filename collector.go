@@ -166,12 +166,8 @@ func (c *Collector) ConnectionClosed(roomID, _ string, duration time.Duration, r
 }
 
 // ResumeAttempt increments the resume attempts counter.
-func (c *Collector) ResumeAttempt(roomID, _ string, success bool) {
-	attrs := []attribute.KeyValue{attribute.Bool("success", success)}
-	if c.cfg.roomAttribute {
-		attrs = append(attrs, attribute.String("room.id", roomID))
-	}
-	c.resumeAttempts.Add(context.Background(), 1, metric.WithAttributes(attrs...))
+func (c *Collector) ResumeAttempt(roomID, _ string) {
+	c.resumeAttempts.Add(context.Background(), 1, c.roomAttrs(roomID))
 }
 
 // RoomCreated increments the rooms created counter and active up-down counter.

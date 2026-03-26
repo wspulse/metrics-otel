@@ -288,7 +288,7 @@ func TestResumeAttempt(t *testing.T) {
 	t.Parallel()
 	c, reader := newTestCollector(t)
 
-	c.ResumeAttempt("room1", "conn1", true)
+	c.ResumeAttempt("room1", "conn1")
 
 	rm := collectMetrics(t, reader)
 	m := findMetric(rm, "wspulse.resume.attempts")
@@ -297,24 +297,36 @@ func TestResumeAttempt(t *testing.T) {
 	}
 	if got := sumInt64(m); got != 1 {
 		t.Errorf("resume attempts: want 1, got %d", got)
+	}
+	// room.id is included by default.
+	assertAttributeValue(t, m, "room.id", "room1")
+	// success attribute must not exist (regression prevention).
+	if hasAttribute(m, "success") {
+		t.Error("resume.attempts must not have a success attribute")
 	}
 }
 
-func TestResumeAttempt_Failure(t *testing.T) {
+func TestResumeAttempt_MultipleAttempts(t *testing.T) {
 	t.Parallel()
 	c, reader := newTestCollector(t)
 
-	c.ResumeAttempt("room1", "conn1", false)
+	c.ResumeAttempt("room1", "conn1")
+	c.ResumeAttempt("room1", "conn2")
 
 	rm := collectMetrics(t, reader)
 	m := findMetric(rm, "wspulse.resume.attempts")
 	if m == nil {
 		t.Fatal("metric wspulse.resume.attempts not found")
 	}
-	if got := sumInt64(m); got != 1 {
-		t.Errorf("resume attempts: want 1, got %d", got)
+	if got := sumInt64(m); got != 2 {
+		t.Errorf("resume attempts: want 2, got %d", got)
 	}
-	assertAttributeValue(t, m, "success", "false")
+	// room.id is included by default.
+	assertAttributeValue(t, m, "room.id", "room1")
+	// success attribute must not exist (regression prevention).
+	if hasAttribute(m, "success") {
+		t.Error("resume.attempts must not have a success attribute")
+	}
 }
 
 // ── Room lifecycle ───────────────────────────────────────────────────────────
