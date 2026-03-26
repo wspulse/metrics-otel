@@ -5,6 +5,7 @@
 ### Changed
 
 - **BREAKING:** Upgrade `wspulse/server` dependency from v0.4.0 to v0.5.0
+- Upgrade `go.opentelemetry.io/otel` dependencies from v1.35.0 to v1.42.0
 - `ConnectionClosed` now accepts a `DisconnectReason` parameter (matching server v0.5.0 interface)
 - `connections.closed` and `connection.duration` now include a `disconnect.reason` attribute (`normal`, `kick`, `grace_expired`, `server_close`, `duplicate`)
 - `send_buffer.utilization` instrument changed from Gauge to Histogram for accurate multi-connection distribution
@@ -14,4 +15,6 @@
 - Initial release: `Collector` implementing `wspulse.MetricsCollector` with OpenTelemetry backend
 - `NewCollector(opts ...Option)` constructor
 - Options: `WithMeterProvider`, `WithNamespace`, `WithRoomAttribute`
+- `resume.attempts` counter includes a `success` bool attribute indicating whether the resume succeeded
 - Explicit histogram bucket boundaries for `connection.duration` (1s-24h), `broadcast.fanout` (1-1000), and `send_buffer.utilization` (0.1-1.0)
+- `doc/usage.md` with instruments table, attributes reference, histogram boundaries, and configuration examples
