@@ -33,9 +33,10 @@ make tidy       # go mod tidy
 - **Naming**: interface names use full words. Package name is `otel`.
 - **Instrument naming**: dot-separated (`wspulse.connections.opened`), follows [OTel Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/).
 - **Attribute naming**: dot-separated keys (`room.id`, not `room_id`).
-- **Error format**: `fmt.Errorf("wspulse/metrics-otel: <context>: %w", err)`.
+- **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
 - **Markdown**: no emojis in documentation files.
 - **Git**: commit messages follow [commit-message-instructions.md](instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
+- **File encoding**: all files must be UTF-8 without BOM. Do not use any other encoding.
 
 ## Critical Rules
 
@@ -47,3 +48,98 @@ make tidy       # go mod tidy
 6. **Thread safety** — all `Collector` methods are called concurrently from server goroutines. OTel instruments are safe for concurrent use, but verify any custom state is properly synchronized.
 7. **Accuracy** — verify instrument names, types, and attribute sets against the plan in the workspace `doc/local/plan/metrics-otel.md`.
 8. **Documentation sync** — when changing public API or options, update `docs/reference/` and `docs/guides/metrics.md` in the docs repo.
+
+## PR Comment Review — MANDATORY
+
+When handling PR review comments, **every unresponded comment must be analyzed and responded to**. No comment may be silently ignored.
+
+### 1. Fetch unresponded comments
+
+Pull all comments that have not received a reply from the PR author. Bot-generated summaries (e.g. Copilot review overview) may be skipped; individual line comments from bots must still be evaluated.
+
+### 2. Analyze each comment
+
+Evaluate against:
+
+| Criterion | Question |
+|-----------|----------|
+| **Validity** | Is the observation correct? Is the suggestion reasonable? |
+| **Severity** | Is it a bug, a correctness issue, a design concern, or a style/preference nitpick? |
+| **Cost** | What is the effort to address? Does the change introduce risk or scope creep? |
+
+### 3. Present analysis for approval
+
+Present all findings to the user before taking action. For each comment, show:
+- The comment content and location
+- Your assessment (validity, severity, cost)
+- Your proposed decision (Fixed / Tracked / Won't fix / Not applicable) with reasoning
+
+**Do not make any code changes or reply to comments until the user has reviewed and approved.** If there are disagreements, discuss until a consensus is reached.
+
+### 4. Execute approved decisions
+
+After approval, carry out each decision and respond on the PR:
+
+- **`Fixed in {hash}. {what changed and why}`** — adopt and fix immediately. Bug and correctness issues must use this path unless the fix requires a separate PR due to scope.
+- **`Tracked in TODOS.md — {reason for deferring}`** — adopt but defer. Add entry to repo root `TODOS.md` with context and PR comment link.
+- **`Won't fix. {clear reasoning}`** — reject the suggestion with explanation.
+- **`Not applicable — {explanation}`** — the comment does not apply (already handled, misunderstanding, duplicate, or already tracked in TODOS.md).
+
+Duplicate or related comments may reference each other: `Same reasoning as {reference} above — {brief}`.
+
+### 5. Zero unresponded comments before merge
+
+The PR must have zero unaddressed comments before merge. This is a hard gate.
+
+## Session Protocol
+
+> Files under `doc/local/` are git-ignored and must **never** be committed.
+> This includes plan files (`doc/local/plan/`), review records, and the AI learning log (`doc/local/ai-learning.md`).
+
+### Start of every session — MANDATORY
+
+**Do these steps before writing any code:**
+
+1. Read `doc/local/ai-learning.md` **in full** to recall past mistakes. If the file is missing or empty, create it with the table header (see format below) before proceeding.
+2. Check `doc/local/plan/` for any in-progress plan and read it fully.
+
+### During feature work — doc before code
+
+Before writing any production code, create or update `doc/local/plan/<feature-name>.md` with:
+
+1. **What** — what are you changing or adding?
+2. **Why** — what problem does it solve? What motivated this change?
+3. **How** — what is the intended approach?
+
+Keep it updated as the approach evolves. This is the primary cross-session context for understanding what was done and why.
+
+For bug fixes, the failing test serves as the "what"; add a brief "why" and "how" to the plan file or `doc/local/ai-learning.md`.
+
+### Review records
+
+After conducting any review (code review, plan review, design review, PR review, etc.), record the findings for cross-session context:
+
+- **Where to write**: this repo's `doc/local/`. If working in a multi-module workspace, also write to the workspace root's `doc/local/`.
+- **Single truth**: write the full record in one location; the other location keeps a brief summary with a file path reference to the full record.
+- **Acceptable formats**:
+  1. Update the relevant plan file in `doc/local/plan/` with the review outcome.
+  2. Dedicated review file in `doc/local/` if no relevant plan exists.
+- **What to record**: review type, key findings, decisions made, action items, and resolution status.
+
+### End of every session — MANDATORY
+
+**Before closing the session, complete this checklist without exception:**
+
+1. Append at least one entry to `doc/local/ai-learning.md` — **even if no mistakes were made**. Record what you confirmed, what technique worked, or what you observed. An empty file is a sign of non-compliance.
+2. Update any in-progress plan in `doc/local/plan/` to reflect completed steps.
+3. Verify `make check` passes in every module you edited.
+
+**Entry format** for `doc/local/ai-learning.md`:
+
+```
+| Date       | Issue or Learning | Root Cause | Prevention Rule |
+| ---------- | ----------------- | ---------- | --------------- |
+| YYYY-MM-DD | <what happened or what you learned> | <why it happened> | <how to avoid it next time> |
+```
+
+**Writing to `ai-learning.md` is not optional. It is the primary cross-session improvement mechanism. An empty file proves the session protocol was ignored.**

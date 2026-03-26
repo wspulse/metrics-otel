@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/wspulse/metrics-otel/actions/workflows/ci.yml/badge.svg)](https://github.com/wspulse/metrics-otel/actions/workflows/ci.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/wspulse/metrics-otel.svg)](https://pkg.go.dev/github.com/wspulse/metrics-otel)
+[![Go](https://img.shields.io/badge/Go-1.26-blue.svg?logo=go)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 OpenTelemetry adapter for [wspulse/server](https://github.com/wspulse/server)'s `MetricsCollector` interface.
@@ -48,6 +49,7 @@ collector := wspotel.NewCollector(
 
 ## Documentation
 
+- [Usage Guide](doc/usage.md) — options, instruments, attributes, histogram buckets
 - [Metrics Integration Guide](https://github.com/wspulse/docs/blob/main/guides/metrics.md)
 
 ## Related Modules
