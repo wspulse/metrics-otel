@@ -36,6 +36,7 @@ make tidy       # go mod tidy
 - **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
 - **Markdown**: no emojis in documentation files.
 - **Git**: commit messages follow [commit-message-instructions.md](instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
+- **File encoding**: all files must be UTF-8 without BOM. Do not use any other encoding.
 
 ## Critical Rules
 
