@@ -98,7 +98,6 @@ collector := wspotel.NewCollector(
 |-----------|------|------------|-------------|
 | `room.id` | string | All instruments (when enabled) | Room identifier. Controlled by `WithRoomAttribute`. |
 | `disconnect.reason` | string | `connections.closed`, `connection.duration` | Disconnect cause: `normal`, `kick`, `grace_expired`, `server_close`, `duplicate` |
-| `success` | bool | `resume.attempts` | Whether the resume attempt succeeded |
 
 ## Histogram Bucket Boundaries
 
