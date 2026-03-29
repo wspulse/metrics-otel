@@ -201,18 +201,16 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// Wait for broadcast to complete.
 	broadcastDone.Wait()
 
-	// Wait for both writePumps to deliver. MessageSent fires asynchronously
-	// in the server's writePump, so poll until the metric reaches the expected value.
+	// Poll until async metrics reach expected values. MessageSent fires
+	// in the server's writePump; MessageReceived and MessageBroadcast fire
+	// in the hub/readPump goroutines. All may lag behind broadcastDone.
 	if got := waitForMetric(t, reader, "wspulse.messages.sent", 2, 3*time.Second); got != 2 {
 		t.Errorf("messages sent: want 2, got %d", got)
 	}
-
-	rm := collect(t, reader)
-
-	if got := findIntMetric(rm, "wspulse.messages.received"); got != 1 {
+	if got := waitForMetric(t, reader, "wspulse.messages.received", 1, 3*time.Second); got != 1 {
 		t.Errorf("messages received: want 1, got %d", got)
 	}
-	if got := findIntMetric(rm, "wspulse.messages.broadcast"); got != 1 {
+	if got := waitForMetric(t, reader, "wspulse.messages.broadcast", 1, 3*time.Second); got != 1 {
 		t.Errorf("messages broadcast: want 1, got %d", got)
 	}
 }
