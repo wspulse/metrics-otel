@@ -58,6 +58,16 @@ func findIntMetric(rm metricdata.ResourceMetrics, name string) int64 {
 	return -1
 }
 
+// awaitCh waits for a signal on ch or fails the test after timeout.
+func awaitCh(t *testing.T, ch <-chan struct{}, label string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("timed out waiting for %s", label)
+	}
+}
+
 // waitForMetric polls the ManualReader until the named metric reaches the
 // expected value or the timeout expires. This accounts for async metric
 // recording in server goroutines (e.g. writePump fires MessageSent after
@@ -110,8 +120,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	// Open 2 connections and wait for server to register them.
 	c1 := dialWS(t, wsURL)
 	c2 := dialWS(t, wsURL)
-	<-connected
-	<-connected
+	awaitCh(t, connected, "connect 1")
+	awaitCh(t, connected, "connect 2")
 
 	rm := collect(t, reader)
 
@@ -128,8 +138,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
 	_ = c2.Close()
-	<-disconnected
-	<-disconnected
+	awaitCh(t, disconnected, "disconnect 1")
+	awaitCh(t, disconnected, "disconnect 2")
 
 	rm = collect(t, reader)
 
@@ -178,8 +188,8 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	defer c1.Close()
 	c2 := dialWS(t, wsURL)
 	defer c2.Close()
-	<-connected
-	<-connected
+	awaitCh(t, connected, "connect 1")
+	awaitCh(t, connected, "connect 2")
 
 	// Send a message — triggers MessageReceived + MessageBroadcast.
 	broadcastDone.Add(1)
