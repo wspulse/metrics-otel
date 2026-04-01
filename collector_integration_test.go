@@ -58,6 +58,16 @@ func findIntMetric(rm metricdata.ResourceMetrics, name string) int64 {
 	return -1
 }
 
+// awaitCh waits for a signal on ch or fails the test after timeout.
+func awaitCh(t *testing.T, ch <-chan struct{}, label string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(3 * time.Second):
+		t.Fatalf("timed out waiting for %s", label)
+	}
+}
+
 // waitForMetric polls the ManualReader until the named metric reaches the
 // expected value or the timeout expires. This accounts for async metric
 // recording in server goroutines (e.g. writePump fires MessageSent after
@@ -110,8 +120,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	// Open 2 connections and wait for server to register them.
 	c1 := dialWS(t, wsURL)
 	c2 := dialWS(t, wsURL)
-	<-connected
-	<-connected
+	awaitCh(t, connected, "connect 1")
+	awaitCh(t, connected, "connect 2")
 
 	rm := collect(t, reader)
 
@@ -128,8 +138,8 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
 	_ = c2.Close()
-	<-disconnected
-	<-disconnected
+	awaitCh(t, disconnected, "disconnect 1")
+	awaitCh(t, disconnected, "disconnect 2")
 
 	rm = collect(t, reader)
 
@@ -178,8 +188,8 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	defer c1.Close()
 	c2 := dialWS(t, wsURL)
 	defer c2.Close()
-	<-connected
-	<-connected
+	awaitCh(t, connected, "connect 1")
+	awaitCh(t, connected, "connect 2")
 
 	// Send a message — triggers MessageReceived + MessageBroadcast.
 	broadcastDone.Add(1)
@@ -191,18 +201,16 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// Wait for broadcast to complete.
 	broadcastDone.Wait()
 
-	// Wait for both writePumps to deliver. MessageSent fires asynchronously
-	// in the server's writePump, so poll until the metric reaches the expected value.
+	// Poll until async metrics reach expected values. MessageSent fires
+	// in the server's writePump; MessageReceived and MessageBroadcast fire
+	// in the hub/readPump goroutines. All may lag behind broadcastDone.
 	if got := waitForMetric(t, reader, "wspulse.messages.sent", 2, 3*time.Second); got != 2 {
 		t.Errorf("messages sent: want 2, got %d", got)
 	}
-
-	rm := collect(t, reader)
-
-	if got := findIntMetric(rm, "wspulse.messages.received"); got != 1 {
+	if got := waitForMetric(t, reader, "wspulse.messages.received", 1, 3*time.Second); got != 1 {
 		t.Errorf("messages received: want 1, got %d", got)
 	}
-	if got := findIntMetric(rm, "wspulse.messages.broadcast"); got != 1 {
+	if got := waitForMetric(t, reader, "wspulse.messages.broadcast", 1, 3*time.Second); got != 1 {
 		t.Errorf("messages broadcast: want 1, got %d", got)
 	}
 }
