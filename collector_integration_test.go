@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
@@ -23,9 +25,7 @@ func dialWS(t *testing.T, url string) *websocket.Conn {
 	t.Helper()
 	dialer := websocket.Dialer{HandshakeTimeout: 3 * time.Second}
 	c, resp, err := dialer.Dial(url, nil)
-	if err != nil {
-		t.Fatalf("Dial failed: %v", err)
-	}
+	require.NoError(t, err, "Dial failed")
 	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
@@ -35,9 +35,7 @@ func dialWS(t *testing.T, url string) *websocket.Conn {
 func collect(t *testing.T, reader *sdkmetric.ManualReader) metricdata.ResourceMetrics {
 	t.Helper()
 	var rm metricdata.ResourceMetrics
-	if err := reader.Collect(context.Background(), &rm); err != nil {
-		t.Fatalf("collect: %v", err)
-	}
+	require.NoError(t, reader.Collect(context.Background(), &rm), "collect metrics")
 	return rm
 }
 
@@ -64,7 +62,7 @@ func awaitCh(t *testing.T, ch <-chan struct{}, label string) {
 	select {
 	case <-ch:
 	case <-time.After(3 * time.Second):
-		t.Fatalf("timed out waiting for %s", label)
+		require.Fail(t, "timed out waiting for "+label)
 	}
 }
 
@@ -125,15 +123,9 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	rm := collect(t, reader)
 
-	if got := findIntMetric(rm, "wspulse.connections.opened"); got != 2 {
-		t.Errorf("connections opened: want 2, got %d", got)
-	}
-	if got := findIntMetric(rm, "wspulse.connections.active"); got != 2 {
-		t.Errorf("connections active: want 2, got %d", got)
-	}
-	if got := findIntMetric(rm, "wspulse.rooms.active"); got != 1 {
-		t.Errorf("rooms active: want 1, got %d", got)
-	}
+	assert.Equal(t, int64(2), findIntMetric(rm, "wspulse.connections.opened"), "connections opened")
+	assert.Equal(t, int64(2), findIntMetric(rm, "wspulse.connections.active"), "connections active")
+	assert.Equal(t, int64(1), findIntMetric(rm, "wspulse.rooms.active"), "rooms active")
 
 	// Close connections and wait for server to process disconnects.
 	_ = c1.Close()
@@ -143,15 +135,9 @@ func TestIntegration_ConnectionLifecycle(t *testing.T) {
 
 	rm = collect(t, reader)
 
-	if got := findIntMetric(rm, "wspulse.connections.closed"); got != 2 {
-		t.Errorf("connections closed: want 2, got %d", got)
-	}
-	if got := findIntMetric(rm, "wspulse.connections.active"); got != 0 {
-		t.Errorf("connections active after close: want 0, got %d", got)
-	}
-	if got := findIntMetric(rm, "wspulse.rooms.active"); got != 0 {
-		t.Errorf("rooms active after close: want 0, got %d", got)
-	}
+	assert.Equal(t, int64(2), findIntMetric(rm, "wspulse.connections.closed"), "connections closed")
+	assert.Equal(t, int64(0), findIntMetric(rm, "wspulse.connections.active"), "connections active after close")
+	assert.Equal(t, int64(0), findIntMetric(rm, "wspulse.rooms.active"), "rooms active after close")
 }
 
 func TestIntegration_MessageMetrics(t *testing.T) {
@@ -194,9 +180,7 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// Send a message — triggers MessageReceived + MessageBroadcast.
 	broadcastDone.Add(1)
 	err := c1.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
-	if err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	require.NoError(t, err, "write message")
 
 	// Wait for broadcast to complete.
 	broadcastDone.Wait()
@@ -204,13 +188,7 @@ func TestIntegration_MessageMetrics(t *testing.T) {
 	// Poll until async metrics reach expected values. MessageSent fires
 	// in the server's writePump; MessageReceived and MessageBroadcast fire
 	// in the hub/readPump goroutines. All may lag behind broadcastDone.
-	if got := waitForMetric(t, reader, "wspulse.messages.sent", 2, 3*time.Second); got != 2 {
-		t.Errorf("messages sent: want 2, got %d", got)
-	}
-	if got := waitForMetric(t, reader, "wspulse.messages.received", 1, 3*time.Second); got != 1 {
-		t.Errorf("messages received: want 1, got %d", got)
-	}
-	if got := waitForMetric(t, reader, "wspulse.messages.broadcast", 1, 3*time.Second); got != 1 {
-		t.Errorf("messages broadcast: want 1, got %d", got)
-	}
+	assert.Equal(t, int64(2), waitForMetric(t, reader, "wspulse.messages.sent", 2, 3*time.Second), "messages sent")
+	assert.Equal(t, int64(1), waitForMetric(t, reader, "wspulse.messages.received", 1, 3*time.Second), "messages received")
+	assert.Equal(t, int64(1), waitForMetric(t, reader, "wspulse.messages.broadcast", 1, 3*time.Second), "messages broadcast")
 }

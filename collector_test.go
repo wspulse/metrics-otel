@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -26,9 +28,7 @@ func newTestCollector(t *testing.T, opts ...wspotel.Option) (*wspotel.Collector,
 func collectMetrics(t *testing.T, reader *sdkmetric.ManualReader) metricdata.ResourceMetrics {
 	t.Helper()
 	var rm metricdata.ResourceMetrics
-	if err := reader.Collect(context.Background(), &rm); err != nil {
-		t.Fatalf("collect: %v", err)
-	}
+	require.NoError(t, reader.Collect(context.Background(), &rm), "collect metrics")
 	return rm
 }
 
@@ -154,9 +154,7 @@ func assertAttributeValue(t *testing.T, m *metricdata.Metrics, key, wantValue st
 			check(dp.Attributes)
 		}
 	}
-	if !found {
-		t.Errorf("expected attribute %s=%q, not found in metric %s", key, wantValue, m.Name)
-	}
+	assert.True(t, found, "expected attribute %s=%q, not found in metric %s", key, wantValue, m.Name)
 }
 
 // ── Interface compliance ─────────────────────────────────────────────────────
@@ -170,12 +168,9 @@ func TestCollector_ImplementsMetricsCollector(t *testing.T) {
 
 func TestWithMeterProvider_NilPanics(t *testing.T) {
 	t.Parallel()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Error("expected panic for nil MeterProvider")
-		}
-	}()
-	_ = wspotel.WithMeterProvider(nil)
+	require.Panics(t, func() {
+		_ = wspotel.WithMeterProvider(nil)
+	}, "expected panic for nil MeterProvider")
 }
 
 // ── Connection lifecycle ─────────────────────────────────────────────────────
@@ -190,21 +185,13 @@ func TestConnectionOpened(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.connections.opened")
-	if m == nil {
-		t.Fatal("metric wspulse.connections.opened not found")
-	}
-	if got := sumInt64(m); got != 2 {
-		t.Errorf("connections opened: want 2, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.connections.opened not found")
+	assert.Equal(t, int64(2), sumInt64(m), "connections opened")
 	assertAttributeValue(t, m, "room.id", "room1")
 
 	active := findMetric(rm, "wspulse.connections.active")
-	if active == nil {
-		t.Fatal("metric wspulse.connections.active not found")
-	}
-	if got := sumInt64(active); got != 2 {
-		t.Errorf("connections active: want 2, got %d", got)
-	}
+	require.NotNil(t, active, "metric wspulse.connections.active not found")
+	assert.Equal(t, int64(2), sumInt64(active), "connections active")
 }
 
 func TestConnectionClosed(t *testing.T) {
@@ -217,25 +204,15 @@ func TestConnectionClosed(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	active := findMetric(rm, "wspulse.connections.active")
-	if active == nil {
-		t.Fatal("metric wspulse.connections.active not found")
-	}
-	if got := sumInt64(active); got != 0 {
-		t.Errorf("connections active: want 0, got %d", got)
-	}
+	require.NotNil(t, active, "metric wspulse.connections.active not found")
+	assert.Equal(t, int64(0), sumInt64(active), "connections active")
 
 	closed := findMetric(rm, "wspulse.connections.closed")
-	if closed == nil {
-		t.Fatal("metric wspulse.connections.closed not found")
-	}
-	if got := sumInt64(closed); got != 1 {
-		t.Errorf("connections closed: want 1, got %d", got)
-	}
+	require.NotNil(t, closed, "metric wspulse.connections.closed not found")
+	assert.Equal(t, int64(1), sumInt64(closed), "connections closed")
 
 	dur := findMetric(rm, "wspulse.connection.duration")
-	if dur == nil {
-		t.Fatal("metric wspulse.connection.duration not found")
-	}
+	require.NotNil(t, dur, "metric wspulse.connection.duration not found")
 
 	// Verify disconnect.reason attribute value on closed counter and duration.
 	assertAttributeValue(t, closed, "disconnect.reason", "normal")
@@ -267,18 +244,12 @@ func TestConnectionClosed_AllReasons(t *testing.T) {
 			rm := collectMetrics(t, reader)
 
 			closed := findMetric(rm, "wspulse.connections.closed")
-			if closed == nil {
-				t.Fatal("metric wspulse.connections.closed not found")
-			}
-			if got := sumInt64(closed); got != 1 {
-				t.Errorf("connections closed: want 1, got %d", got)
-			}
+			require.NotNil(t, closed, "metric wspulse.connections.closed not found")
+			assert.Equal(t, int64(1), sumInt64(closed), "connections closed")
 			assertAttributeValue(t, closed, "disconnect.reason", tt.want)
 
 			dur := findMetric(rm, "wspulse.connection.duration")
-			if dur == nil {
-				t.Fatal("metric wspulse.connection.duration not found")
-			}
+			require.NotNil(t, dur, "metric wspulse.connection.duration not found")
 			assertAttributeValue(t, dur, "disconnect.reason", tt.want)
 		})
 	}
@@ -292,18 +263,12 @@ func TestResumeAttempt(t *testing.T) {
 
 	rm := collectMetrics(t, reader)
 	m := findMetric(rm, "wspulse.resume.attempts")
-	if m == nil {
-		t.Fatal("metric wspulse.resume.attempts not found")
-	}
-	if got := sumInt64(m); got != 1 {
-		t.Errorf("resume attempts: want 1, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.resume.attempts not found")
+	assert.Equal(t, int64(1), sumInt64(m), "resume attempts")
 	// room.id is included by default.
 	assertAttributeValue(t, m, "room.id", "room1")
 	// success attribute must not exist (regression prevention).
-	if hasAttribute(m, "success") {
-		t.Error("resume.attempts must not have a success attribute")
-	}
+	assert.False(t, hasAttribute(m, "success"), "resume.attempts must not have a success attribute")
 }
 
 func TestResumeAttempt_MultipleAttempts(t *testing.T) {
@@ -315,18 +280,12 @@ func TestResumeAttempt_MultipleAttempts(t *testing.T) {
 
 	rm := collectMetrics(t, reader)
 	m := findMetric(rm, "wspulse.resume.attempts")
-	if m == nil {
-		t.Fatal("metric wspulse.resume.attempts not found")
-	}
-	if got := sumInt64(m); got != 2 {
-		t.Errorf("resume attempts: want 2, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.resume.attempts not found")
+	assert.Equal(t, int64(2), sumInt64(m), "resume attempts")
 	// room.id is included by default.
 	assertAttributeValue(t, m, "room.id", "room1")
 	// success attribute must not exist (regression prevention).
-	if hasAttribute(m, "success") {
-		t.Error("resume.attempts must not have a success attribute")
-	}
+	assert.False(t, hasAttribute(m, "success"), "resume.attempts must not have a success attribute")
 }
 
 // ── Room lifecycle ───────────────────────────────────────────────────────────
@@ -342,20 +301,12 @@ func TestRoomCreatedDestroyed(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	active := findMetric(rm, "wspulse.rooms.active")
-	if active == nil {
-		t.Fatal("metric wspulse.rooms.active not found")
-	}
-	if got := sumInt64(active); got != 1 {
-		t.Errorf("rooms active: want 1, got %d", got)
-	}
+	require.NotNil(t, active, "metric wspulse.rooms.active not found")
+	assert.Equal(t, int64(1), sumInt64(active), "rooms active")
 
 	created := findMetric(rm, "wspulse.rooms.created")
-	if created == nil {
-		t.Fatal("metric wspulse.rooms.created not found")
-	}
-	if got := sumInt64(created); got != 2 {
-		t.Errorf("rooms created: want 2, got %d", got)
-	}
+	require.NotNil(t, created, "metric wspulse.rooms.created not found")
+	assert.Equal(t, int64(2), sumInt64(created), "rooms created")
 }
 
 // ── Throughput ───────────────────────────────────────────────────────────────
@@ -370,20 +321,12 @@ func TestMessageReceived(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.messages.received")
-	if m == nil {
-		t.Fatal("metric wspulse.messages.received not found")
-	}
-	if got := sumInt64(m); got != 2 {
-		t.Errorf("messages received: want 2, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.messages.received not found")
+	assert.Equal(t, int64(2), sumInt64(m), "messages received")
 
 	b := findMetric(rm, "wspulse.messages.received.bytes")
-	if b == nil {
-		t.Fatal("metric wspulse.messages.received.bytes not found")
-	}
-	if got := sumInt64(b); got != 300 {
-		t.Errorf("messages received bytes: want 300, got %d", got)
-	}
+	require.NotNil(t, b, "metric wspulse.messages.received.bytes not found")
+	assert.Equal(t, int64(300), sumInt64(b), "messages received bytes")
 }
 
 func TestMessageBroadcast(t *testing.T) {
@@ -395,17 +338,11 @@ func TestMessageBroadcast(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.messages.broadcast")
-	if m == nil {
-		t.Fatal("metric wspulse.messages.broadcast not found")
-	}
-	if got := sumInt64(m); got != 1 {
-		t.Errorf("messages broadcast: want 1, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.messages.broadcast not found")
+	assert.Equal(t, int64(1), sumInt64(m), "messages broadcast")
 
 	f := findMetric(rm, "wspulse.broadcast.fanout")
-	if f == nil {
-		t.Fatal("metric wspulse.broadcast.fanout not found")
-	}
+	require.NotNil(t, f, "metric wspulse.broadcast.fanout not found")
 }
 
 func TestMessageSent(t *testing.T) {
@@ -417,12 +354,8 @@ func TestMessageSent(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.messages.sent")
-	if m == nil {
-		t.Fatal("metric wspulse.messages.sent not found")
-	}
-	if got := sumInt64(m); got != 1 {
-		t.Errorf("messages sent: want 1, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.messages.sent not found")
+	assert.Equal(t, int64(1), sumInt64(m), "messages sent")
 }
 
 func TestFrameDropped(t *testing.T) {
@@ -435,12 +368,8 @@ func TestFrameDropped(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.frames.dropped")
-	if m == nil {
-		t.Fatal("metric wspulse.frames.dropped not found")
-	}
-	if got := sumInt64(m); got != 2 {
-		t.Errorf("frames dropped: want 2, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.frames.dropped not found")
+	assert.Equal(t, int64(2), sumInt64(m), "frames dropped")
 }
 
 func TestSendBufferUtilization(t *testing.T) {
@@ -452,15 +381,9 @@ func TestSendBufferUtilization(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.send_buffer.utilization")
-	if m == nil {
-		t.Fatal("metric wspulse.send_buffer.utilization not found")
-	}
-	if got := histogramCount(m); got != 1 {
-		t.Errorf("buffer utilization count: want 1, got %d", got)
-	}
-	if got := histogramSum(m); got != 0.5 {
-		t.Errorf("buffer utilization sum: want 0.5, got %v", got)
-	}
+	require.NotNil(t, m, "metric wspulse.send_buffer.utilization not found")
+	assert.Equal(t, uint64(1), histogramCount(m), "buffer utilization count")
+	assert.Equal(t, 0.5, histogramSum(m), "buffer utilization sum")
 }
 
 func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
@@ -472,15 +395,9 @@ func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.send_buffer.utilization")
-	if m == nil {
-		t.Fatal("metric wspulse.send_buffer.utilization not found")
-	}
-	if got := histogramCount(m); got != 1 {
-		t.Errorf("buffer utilization count: want 1, got %d", got)
-	}
-	if got := histogramSum(m); got != 0.0 {
-		t.Errorf("buffer utilization sum: want 0.0, got %v", got)
-	}
+	require.NotNil(t, m, "metric wspulse.send_buffer.utilization not found")
+	assert.Equal(t, uint64(1), histogramCount(m), "buffer utilization count")
+	assert.Equal(t, 0.0, histogramSum(m), "buffer utilization sum")
 }
 
 // ── Heartbeat ────────────────────────────────────────────────────────────────
@@ -494,12 +411,8 @@ func TestPongTimeout(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.pong.timeouts")
-	if m == nil {
-		t.Fatal("metric wspulse.pong.timeouts not found")
-	}
-	if got := sumInt64(m); got != 1 {
-		t.Errorf("pong timeouts: want 1, got %d", got)
-	}
+	require.NotNil(t, m, "metric wspulse.pong.timeouts not found")
+	assert.Equal(t, int64(1), sumInt64(m), "pong timeouts")
 }
 
 func TestWithNamespace_Empty(t *testing.T) {
@@ -512,15 +425,7 @@ func TestWithNamespace_Empty(t *testing.T) {
 
 	// Empty namespace is a no-op — default "wspulse" is used.
 	m := findMetric(rm, "wspulse.rooms.created")
-	if m == nil {
-		var names []string
-		for _, sm := range rm.ScopeMetrics {
-			for _, metric := range sm.Metrics {
-				names = append(names, metric.Name)
-			}
-		}
-		t.Fatalf("expected wspulse.rooms.created (empty namespace ignored), got: %v", names)
-	}
+	require.NotNilf(t, m, "expected wspulse.rooms.created (empty namespace ignored), got metrics from reader")
 }
 
 // ── WithRoomAttribute(false) ─────────────────────────────────────────────────
@@ -536,27 +441,15 @@ func TestWithRoomAttribute_False(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "wspulse.connections.opened")
-	if m == nil {
-		t.Fatal("metric wspulse.connections.opened not found")
-	}
-	if got := sumInt64(m); got != 1 {
-		t.Errorf("connections opened: want 1, got %d", got)
-	}
-	if hasAttribute(m, "room.id") {
-		t.Error("room.id attribute should not exist when WithRoomAttribute(false)")
-	}
+	require.NotNil(t, m, "metric wspulse.connections.opened not found")
+	assert.Equal(t, int64(1), sumInt64(m), "connections opened")
+	assert.False(t, hasAttribute(m, "room.id"), "room.id attribute should not exist when WithRoomAttribute(false)")
 
 	// disconnect.reason must be present even without room attribute.
 	closed := findMetric(rm, "wspulse.connections.closed")
-	if closed == nil {
-		t.Fatal("metric wspulse.connections.closed not found")
-	}
-	if !hasAttribute(closed, "disconnect.reason") {
-		t.Error("connections.closed missing disconnect.reason when WithRoomAttribute(false)")
-	}
-	if hasAttribute(closed, "room.id") {
-		t.Error("connections.closed should not have room.id when WithRoomAttribute(false)")
-	}
+	require.NotNil(t, closed, "metric wspulse.connections.closed not found")
+	assert.True(t, hasAttribute(closed, "disconnect.reason"), "connections.closed missing disconnect.reason when WithRoomAttribute(false)")
+	assert.False(t, hasAttribute(closed, "room.id"), "connections.closed should not have room.id when WithRoomAttribute(false)")
 }
 
 // ── WithNamespace ────────────────────────────────────────────────────────────
@@ -570,16 +463,7 @@ func TestWithNamespace(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "myapp.rooms.created")
-	if m == nil {
-		// List all metric names for debugging.
-		var names []string
-		for _, sm := range rm.ScopeMetrics {
-			for _, metric := range sm.Metrics {
-				names = append(names, metric.Name)
-			}
-		}
-		t.Fatalf("expected myapp.rooms.created, got: %v", names)
-	}
+	require.NotNilf(t, m, "expected myapp.rooms.created, not found in collected metrics")
 }
 
 // ── Benchmarks ──────────────────────────────────────────────────────────────
