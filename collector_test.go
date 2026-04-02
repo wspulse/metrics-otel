@@ -32,6 +32,17 @@ func collectMetrics(t *testing.T, reader *sdkmetric.ManualReader) metricdata.Res
 	return rm
 }
 
+// metricNames returns the names of all metrics in the given ResourceMetrics.
+func metricNames(rm metricdata.ResourceMetrics) []string {
+	var names []string
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			names = append(names, m.Name)
+		}
+	}
+	return names
+}
+
 // findMetric searches for a metric by name across all scopes.
 func findMetric(rm metricdata.ResourceMetrics, name string) *metricdata.Metrics {
 	for _, sm := range rm.ScopeMetrics {
@@ -425,7 +436,7 @@ func TestWithNamespace_Empty(t *testing.T) {
 
 	// Empty namespace is a no-op — default "wspulse" is used.
 	m := findMetric(rm, "wspulse.rooms.created")
-	require.NotNilf(t, m, "expected wspulse.rooms.created (empty namespace ignored), got metrics from reader")
+	require.NotNilf(t, m, "expected wspulse.rooms.created (empty namespace ignored), collected: %v", metricNames(rm))
 }
 
 // ── WithRoomAttribute(false) ─────────────────────────────────────────────────
@@ -463,7 +474,7 @@ func TestWithNamespace(t *testing.T) {
 	rm := collectMetrics(t, reader)
 
 	m := findMetric(rm, "myapp.rooms.created")
-	require.NotNilf(t, m, "expected myapp.rooms.created, not found in collected metrics")
+	require.NotNilf(t, m, "expected myapp.rooms.created, collected: %v", metricNames(rm))
 }
 
 // ── Benchmarks ──────────────────────────────────────────────────────────────
