@@ -81,16 +81,25 @@ func histogramSum(m *metricdata.Metrics) float64 {
 	return 0
 }
 
-// histogramCount returns the total count across all data points in a Float64 histogram.
+// histogramCount returns the total count across all data points in a histogram
+// (Float64 or Int64).
 func histogramCount(m *metricdata.Metrics) uint64 {
-	if d, ok := m.Data.(metricdata.Histogram[float64]); ok {
+	switch d := m.Data.(type) {
+	case metricdata.Histogram[float64]:
 		var total uint64
 		for _, dp := range d.DataPoints {
 			total += dp.Count
 		}
 		return total
+	case metricdata.Histogram[int64]:
+		var total uint64
+		for _, dp := range d.DataPoints {
+			total += dp.Count
+		}
+		return total
+	default:
+		return 0
 	}
-	return 0
 }
 
 // hasAttribute checks if any data point has a specific attribute key.
