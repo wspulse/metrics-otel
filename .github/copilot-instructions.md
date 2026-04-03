@@ -8,7 +8,9 @@ wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/server's `Metri
 
 - **`collector.go`** — `Collector` struct implementing `wspulse.MetricsCollector`. Creates all OTel instruments on construction. Each interface method records to the corresponding instrument.
 - **`options.go`** — `Option` functional options: `WithMeterProvider`, `WithNamespace`, `WithRoomAttribute`.
-- **`collector_test.go`** — Unit tests using `sdkmetric.NewManualReader()` to verify instrument recordings.
+- **`collector_test.go`** — Unit tests and test helpers using `sdkmetric.NewManualReader()` to verify instrument recordings.
+- **`lifecycle_test.go`** — Component tests for connection and room lifecycle scenarios.
+- **`throughput_test.go`** — Component tests for message flow, broadcast, and backpressure scenarios.
 
 ## Dependencies
 
@@ -21,7 +23,7 @@ wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/server's `Metri
 ```bash
 make fmt        # format source files
 make check      # fmt + lint + test (pre-commit gate)
-make test       # unit tests with race detector
+make test       # tests with race detector
 make test-cover # tests with coverage report
 make bench      # benchmarks
 make tidy       # go mod tidy
