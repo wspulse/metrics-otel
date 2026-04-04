@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.3.0] - 2026-04-04
+
+### Fixed
+
+- Used polling for all async message metrics to prevent flaky reads
+- Added timeout to bare channel receives in tests
+
+### Changed
+
+- Migrated integration tests to deterministic component tests — zero network I/O
+- Adopted `testify` for test assertions
+- Removed integration CI job; component tests run in main `check` pipeline
+
+---
+
 ## [v0.2.0] - 2026-03-27
 
 ### Added
