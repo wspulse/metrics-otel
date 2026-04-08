@@ -137,6 +137,14 @@ func hasAttribute(m *metricdata.Metrics, key string) bool {
 				}
 			}
 		}
+	case metricdata.Histogram[int64]:
+		for _, dp := range d.DataPoints {
+			for _, attr := range dp.Attributes.ToSlice() {
+				if string(attr.Key) == key {
+					return true
+				}
+			}
+		}
 	}
 	return false
 }
