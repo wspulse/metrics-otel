@@ -8,7 +8,9 @@ wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/server's `Metri
 
 - **`collector.go`** — `Collector` struct implementing `wspulse.MetricsCollector`. Creates all OTel instruments on construction. Each interface method records to the corresponding instrument.
 - **`options.go`** — `Option` functional options: `WithMeterProvider`, `WithNamespace`, `WithRoomAttribute`.
-- **`collector_test.go`** — Unit tests using `sdkmetric.NewManualReader()` to verify instrument recordings.
+- **`collector_test.go`** — Unit tests and test helpers using `sdkmetric.NewManualReader()` to verify instrument recordings.
+- **`lifecycle_test.go`** — Component tests for connection and room lifecycle scenarios.
+- **`throughput_test.go`** — Component tests for message flow, broadcast, and backpressure scenarios.
 
 ## Dependencies
 
@@ -21,7 +23,7 @@ wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/server's `Metri
 ```bash
 make fmt        # format source files
 make check      # fmt + lint + test (pre-commit gate)
-make test       # unit tests with race detector
+make test       # tests with race detector
 make test-cover # tests with coverage report
 make bench      # benchmarks
 make tidy       # go mod tidy
@@ -36,13 +38,30 @@ make tidy       # go mod tidy
 - **Error format**: `fmt.Errorf("wspulse: <context>: %w", err)`.
 - **Markdown**: no emojis in documentation files.
 - **Git**: commit messages follow [commit-message-instructions.md](instructions/commit-message-instructions.md). Branch strategy: `feat/`, `fix/`, `chore/`. Never push directly to `main`.
+  - **Pull request description**: must follow the repo's `.github/PULL_REQUEST_TEMPLATE.md`. Fill in every section (Summary, Changes, Checklist). Do not invent custom formats.
 - **File encoding**: all files must be UTF-8 without BOM. Do not use any other encoding.
+
+## Feature Workflow
+
+All new features and design changes follow this process — do not skip steps:
+
+1. **Plan** — write idea to `doc/local/plan/<name>.md` (local only, git-ignored)
+2. **Quick discussion** — feasibility + value check
+3. **Go / No-go** — kill or proceed
+4. **Layer check** — transport layer (wspulse implements) or application layer (write docs recipe instead)
+5. **Issue** — repo-scoped work: open issue on this repo. Cross-repo/global work: open issue on [`wspulse/.github`](https://github.com/wspulse/.github). Include summary, scope, impact assessment, priority label + milestone
+6. **Design discussion** — API surface, cross-SDK parity, contract/protocol updates, edge cases
+7. **Task** — feature branch from `develop`, implement with tests, CHANGELOG entry, PR following template. **Repo-scoped**: link PR to the issue. **Global**: each PR mentions the global issue (e.g., `wspulse/.github#N`); after opening a PR, comment on the global issue with the PR link
 
 ## Critical Rules
 
 1. **Read before write** — read the target file before editing.
 2. **STOP — test first, fix second** — when a bug is discovered or reported, do NOT touch production code until a failing test exists. Follow this exact sequence: (1) write a failing test, (2) confirm it fails, (3) fix the code, (4) confirm it passes, (5) run `make check`.
-3. **`make check` gates every commit** — fmt + lint + test must pass.
+3. **STOP — before every commit, verify this checklist:**
+    1. Run `make check` (fmt → lint → test) and confirm it passes. Skip if the commit contains only non-code changes (e.g. documentation, comments, Markdown).
+    2. Commit message follows [commit-message-instructions.md](instructions/commit-message-instructions.md): correct type, subject ≤ 50 chars, numbered body items stating reason → change.
+    3. This commit contains exactly one logical change — no unrelated modifications.
+    4. If any item fails — fix it before committing.
 4. **Minimal changes** — one concern per edit.
 5. **No breaking changes without version bump** — exported symbols are a public contract.
 6. **Thread safety** — all `Collector` methods are called concurrently from server goroutines. OTel instruments are safe for concurrent use, but verify any custom state is properly synchronized.
