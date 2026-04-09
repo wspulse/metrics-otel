@@ -17,7 +17,7 @@ import (
 // Uses the global MeterProvider (configured elsewhere in your app).
 collector := wspotel.NewCollector()
 
-srv := wspulse.NewServer(connect,
+hub := wspulse.NewHub(connect,
     wspulse.WithMetrics(collector),
 )
 ```
@@ -97,7 +97,7 @@ collector := wspotel.NewCollector(
 | Attribute | Type | Applied To | Description |
 |-----------|------|------------|-------------|
 | `room.id` | string | All instruments (when enabled) | Room identifier. Controlled by `WithRoomAttribute`. |
-| `disconnect.reason` | string | `connections.closed`, `connection.duration` | Disconnect cause: `normal`, `kick`, `grace_expired`, `server_close`, `duplicate` |
+| `disconnect.reason` | string | `connections.closed`, `connection.duration` | Disconnect cause: `normal`, `kick`, `grace_expired`, `hub_close`, `duplicate` |
 
 ## Histogram Bucket Boundaries
 

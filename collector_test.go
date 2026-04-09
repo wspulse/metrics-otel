@@ -257,7 +257,7 @@ func TestConnectionClosed_AllReasons(t *testing.T) {
 		{wspulse.DisconnectNormal, "normal"},
 		{wspulse.DisconnectKick, "kick"},
 		{wspulse.DisconnectGraceExpired, "grace_expired"},
-		{wspulse.DisconnectServerClose, "server_close"},
+		{wspulse.DisconnectHubClose, "hub_close"},
 		{wspulse.DisconnectDuplicate, "duplicate"},
 	}
 
