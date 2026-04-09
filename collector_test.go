@@ -11,8 +11,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
+	wspulse "github.com/wspulse/hub"
 	wspotel "github.com/wspulse/metrics-otel"
-	wspulse "github.com/wspulse/server"
 )
 
 func newTestCollector(t *testing.T, opts ...wspotel.Option) (*wspotel.Collector, *sdkmetric.ManualReader) {
