@@ -23,10 +23,10 @@ github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0t
 github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7so1lCWt35ZSgc=
 github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
-github.com/wspulse/core v0.2.0 h1:1Tyd2OZ2KMi+qvmf5PKxP7KDzCfT09Jx6KRUrDEXlCg=
-github.com/wspulse/core v0.2.0/go.mod h1:IT/dOeC+Hwh+CT6rI7YVI1CKdVmbd4tbpF6ggztXl8M=
-github.com/wspulse/server v0.6.0 h1:oHNY1auxv1bKtNSdB2NmBqYVxjR/I/OD+w/uNsbmHZY=
-github.com/wspulse/server v0.6.0/go.mod h1:BIncijHx5IbPkPCZfO3P5Hye3o2jWWQ352TKMDnkkvU=
+github.com/wspulse/core v0.3.1 h1:IPcFmNoX9or0rCqr7sRuDTfxLU8X+9bXoonlxVG4hFM=
+github.com/wspulse/core v0.3.1/go.mod h1:ZJxv16MeEIcq9z3Wo2fmz3P+qSz3IA28nuoTYk8pYC0=
+github.com/wspulse/server v0.8.0 h1:eL6Q3Du2urELZdi0NBUHKnD1242lUN8GKg9HfABCRzU=
+github.com/wspulse/server v0.8.0/go.mod h1:9jjKIh8SVIOEar0B0prBoaz9fSGHmjKITnuQDn/08Gs=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
 go.opentelemetry.io/otel v1.42.0 h1:lSQGzTgVR3+sgJDAU/7/ZMjN9Z+vUip7leaqBKy4sho=
