@@ -11,8 +11,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
+	wspulse "github.com/wspulse/hub"
 	wspotel "github.com/wspulse/metrics-otel"
-	wspulse "github.com/wspulse/server"
 )
 
 func newTestCollector(t *testing.T, opts ...wspotel.Option) (*wspotel.Collector, *sdkmetric.ManualReader) {
@@ -257,7 +257,7 @@ func TestConnectionClosed_AllReasons(t *testing.T) {
 		{wspulse.DisconnectNormal, "normal"},
 		{wspulse.DisconnectKick, "kick"},
 		{wspulse.DisconnectGraceExpired, "grace_expired"},
-		{wspulse.DisconnectServerClose, "server_close"},
+		{wspulse.DisconnectHubClose, "hub_close"},
 		{wspulse.DisconnectDuplicate, "duplicate"},
 	}
 
