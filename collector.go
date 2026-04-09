@@ -1,4 +1,4 @@
-// Package otel provides an OpenTelemetry adapter for wspulse/server's
+// Package otel provides an OpenTelemetry adapter for wspulse/hub's
 // MetricsCollector interface. It translates server lifecycle events into
 // OTel instruments (counters, up-down counters, histograms).
 package otel
@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
-	wspulse "github.com/wspulse/server"
+	wspulse "github.com/wspulse/hub"
 )
 
 // Collector implements wspulse.MetricsCollector using OpenTelemetry metrics.

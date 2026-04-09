@@ -4,10 +4,10 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/wspulse/metrics-otel.svg)](https://pkg.go.dev/github.com/wspulse/metrics-otel)
 [![Go](https://img.shields.io/badge/Go-1.26-blue.svg?logo=go)](https://go.dev)
 [![OTel](https://img.shields.io/badge/OpenTelemetry-v1.42.0-blue.svg?logo=opentelemetry)](https://opentelemetry.io)
-[![wspulse/server](https://img.shields.io/badge/wspulse%2Fserver-v0.8.0-blue.svg)](https://github.com/wspulse/server)
+[![wspulse/hub](https://img.shields.io/badge/wspulse%2Fhub-v0.8.1-blue.svg)](https://github.com/wspulse/hub)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-OpenTelemetry adapter for [wspulse/server](https://github.com/wspulse/server)'s `MetricsCollector` interface.
+OpenTelemetry adapter for [wspulse/hub](https://github.com/wspulse/hub)'s `MetricsCollector` interface.
 
 ---
 
@@ -23,7 +23,7 @@ go get github.com/wspulse/metrics-otel
 
 ```go
 import (
-    "github.com/wspulse/server"
+    "github.com/wspulse/hub"
     wspotel "github.com/wspulse/metrics-otel"
 )
 
@@ -56,6 +56,6 @@ collector := wspotel.NewCollector(
 
 ## Related Modules
 
-- [wspulse/server](https://github.com/wspulse/server) — WebSocket server library
+- [wspulse/hub](https://github.com/wspulse/hub) — WebSocket server library
 - [wspulse/metrics-prometheus](https://github.com/wspulse/metrics-prometheus) — Prometheus adapter
 - [wspulse/docs](https://github.com/wspulse/docs) — User-facing documentation

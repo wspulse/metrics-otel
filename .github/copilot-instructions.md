@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/server's `MetricsCollector` interface. It translates server lifecycle events into OTel instruments (counters, up-down counters, histograms, gauges). Module path: `github.com/wspulse/metrics-otel`. Package name: `otel`.
+wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/hub's `MetricsCollector` interface. It translates hub lifecycle events into OTel instruments (counters, up-down counters, histograms, gauges). Module path: `github.com/wspulse/metrics-otel`. Package name: `otel`.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ wspulse/metrics-otel is an **OpenTelemetry adapter** for wspulse/server's `Metri
 
 ## Dependencies
 
-- `github.com/wspulse/server` — source of `MetricsCollector` interface
+- `github.com/wspulse/hub` — source of `MetricsCollector` interface
 - `go.opentelemetry.io/otel/metric` — OTel metrics API
 - `go.opentelemetry.io/otel/sdk/metric` — OTel metrics SDK (test only)
 
@@ -31,7 +31,7 @@ make tidy       # go mod tidy
 
 ## Conventions
 
-- **Go style**: same as wspulse/server — `gofmt`/`goimports`, GoDoc on all public symbols.
+- **Go style**: same as wspulse/hub — `gofmt`/`goimports`, GoDoc on all public symbols.
 - **Naming**: interface names use full words. Package name is `otel`.
 - **Instrument naming**: dot-separated (`wspulse.connections.opened`), follows [OTel Semantic Conventions](https://opentelemetry.io/docs/specs/semconv/).
 - **Attribute naming**: dot-separated keys (`room.id`, not `room_id`).

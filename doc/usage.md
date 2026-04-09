@@ -10,7 +10,7 @@ go get github.com/wspulse/metrics-otel
 
 ```go
 import (
-    wspulse "github.com/wspulse/server"
+    wspulse "github.com/wspulse/hub"
     wspotel "github.com/wspulse/metrics-otel"
 )
 
