@@ -41,7 +41,7 @@ type Collector struct {
 	sendBufferUtilization metric.Float64Histogram
 
 	// Heartbeat
-	pongTimeouts metric.Int64Counter
+	heartbeatFailures metric.Int64Counter
 }
 
 // compile-time check: Collector must satisfy wspulse.MetricsCollector.
@@ -122,8 +122,8 @@ func NewCollector(opts ...Option) *Collector {
 	must(err)
 
 	// Heartbeat
-	c.pongTimeouts, err = meter.Int64Counter(cfg.namespace+".pong.timeouts",
-		metric.WithDescription("Total number of pong timeouts."))
+	c.heartbeatFailures, err = meter.Int64Counter(cfg.namespace+".heartbeat.failures",
+		metric.WithDescription("Total number of heartbeat failures."))
 	must(err)
 
 	return c
@@ -217,7 +217,7 @@ func (c *Collector) SendBufferUtilization(roomID, _ string, used, capacity int) 
 	c.sendBufferUtilization.Record(context.Background(), ratio, c.roomAttrs(roomID))
 }
 
-// PongTimeout increments the pong timeouts counter.
-func (c *Collector) PongTimeout(roomID, _ string) {
-	c.pongTimeouts.Add(context.Background(), 1, c.roomAttrs(roomID))
+// HeartbeatFailed increments the heartbeat failures counter.
+func (c *Collector) HeartbeatFailed(roomID, _ string) {
+	c.heartbeatFailures.Add(context.Background(), 1, c.roomAttrs(roomID))
 }

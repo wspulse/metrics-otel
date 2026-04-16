@@ -88,7 +88,7 @@ collector := wspotel.NewCollector(
 
 | Instrument | Type | Unit | Description |
 |------------|------|------|-------------|
-| `{ns}.pong.timeouts` | Counter (Int64) | | Total pong timeouts |
+| `{ns}.heartbeat.failures` | Counter (Int64) | | Total heartbeat failures |
 
 `{ns}` defaults to `wspulse`. Change it with `WithNamespace`.
 

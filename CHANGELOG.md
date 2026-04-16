@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Breaking changes
+
+- Renamed `PongTimeout` method to `HeartbeatFailed` to match the updated
+  `MetricsCollector` interface. OTel instrument renamed from
+  `wspulse.pong.timeouts` to `wspulse.heartbeat.failures`.
+
+---
+
 ## [v0.3.0] - 2026-04-04
 
 ### Changed
