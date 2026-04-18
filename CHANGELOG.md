@@ -22,10 +22,13 @@
 
 ## [v0.4.0] - 2026-04-09
 
-### Changed
+### Breaking changes
 
 - Migrated import path from `github.com/wspulse/server` to
   `github.com/wspulse/hub` following the upstream rename.
+
+### Changed
+
 - Upgraded `github.com/wspulse/hub` from v0.6.0 to v0.8.1.
 
 ---
