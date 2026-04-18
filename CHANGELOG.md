@@ -14,10 +14,6 @@
 
 - Upgraded `github.com/wspulse/hub` from v0.8.1 to v0.10.0.
 
-### Chore
-
-- Added `pr-to-main-gate` CI workflow.
-
 ---
 
 ## [v0.4.0] - 2026-04-09
