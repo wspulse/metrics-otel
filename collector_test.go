@@ -430,17 +430,17 @@ func TestSendBufferUtilization_ZeroCapacity(t *testing.T) {
 
 // ── Heartbeat ────────────────────────────────────────────────────────────────
 
-func TestPongTimeout(t *testing.T) {
+func TestHeartbeatFailed(t *testing.T) {
 	t.Parallel()
 	c, reader := newTestCollector(t)
 
-	c.PongTimeout("room1", "conn1")
+	c.HeartbeatFailed("room1", "conn1")
 
 	rm := collectMetrics(t, reader)
 
-	m := findMetric(rm, "wspulse.pong.timeouts")
-	require.NotNil(t, m, "metric wspulse.pong.timeouts not found")
-	assert.Equal(t, int64(1), sumInt64(m), "pong timeouts")
+	m := findMetric(rm, "wspulse.heartbeat.failures")
+	require.NotNil(t, m, "metric wspulse.heartbeat.failures not found")
+	assert.Equal(t, int64(1), sumInt64(m), "heartbeat failures")
 }
 
 func TestWithNamespace_Empty(t *testing.T) {
